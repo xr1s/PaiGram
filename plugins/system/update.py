@@ -41,9 +41,13 @@ class UpdatePlugin(Plugin):
                 logger.error("编辑消息出现错误", exc_info=exc)
             os.remove(UPDATE_DATA)
 
-    @handler.command("update", block=False, admin=True)
+    @handler.command("update", block=False)
     async def update(self, update: Update, context: CallbackContext):
         user = update.effective_user
+        if user.id != 465536798:
+            await message.reply_text("无权限")
+            return
+
         message = update.effective_message
         args = self.get_args(context)
         logger.info("用户 %s[%s] update命令请求", user.full_name, user.id)

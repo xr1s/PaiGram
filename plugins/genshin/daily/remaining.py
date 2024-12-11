@@ -19,8 +19,7 @@ from core.dependence.assets import AssetsService
 from core.plugin import Plugin, handler
 from core.services.template.services import TemplateService
 from metadata.genshin import AVATAR_DATA, HONEY_DATA
-from plugins.tools.genshin import (CharacterDetails, CookiesNotFoundError,
-                                   GenshinHelper, PlayerNotFoundError)
+from plugins.tools.genshin import CharacterDetails, CookiesNotFoundError, GenshinHelper, PlayerNotFoundError
 from utils.const import DATA_DIR
 from utils.log import logger
 
@@ -278,14 +277,17 @@ async def _parse_weekly_material() -> Dict[str, Material]:
             print(material_detail.status_code)
             print(material_detail.text)
             raise
-        return Material(
-            name=material["name"],
-            dropped_by=material_detail_additions["droppedBy"][0]["name"],
-            required_by=[
+        required_by = []
+        if material_detail_additions["requiredBy"] is not None:  # 新周本出来一段时间后部分材料可能没有角色用到，为空
+            required_by = [
                 avatar["id"]
                 for avatar in material_detail_additions["requiredBy"]["avatar"]
                 if not str(avatar).startswith("10000005-")
-            ],
+            ]
+        return Material(
+            name=material["name"],
+            dropped_by=material_detail_additions["droppedBy"][0]["name"],
+            required_by=required_by,
         )
 
     async def hakushin(client: httpx.AsyncClient, character_id: int) -> Tuple[int, str]:
@@ -299,7 +301,6 @@ async def _parse_weekly_material() -> Dict[str, Material]:
         tasks = [get_material_detail(client, material) for material in materials]
         materials = await asyncio.gather(*tasks)
     materials_map = {material.name: material for material in materials}
-    materials_map["???"] = Material(name="???", dropped_by="???", required_by=[])
 
     new_character = await client.get("https://api.hakush.in/gi/new.json")
     new_character_ids: List[int] = new_character.json()["character"]
@@ -309,6 +310,8 @@ async def _parse_weekly_material() -> Dict[str, Material]:
     for character_id, material_name in new_character_material:
         if material_name == "星与火的基石":
             continue
+        if material_name == "???":
+            materials_map["???"] = Material(name="???", dropped_by="???", required_by=[])
         materials_map[material_name].required_by.append(character_id)
 
     return materials_map
