@@ -11,10 +11,13 @@ __all__ = ("MetadataPlugin",)
 
 
 class MetadataPlugin(Plugin):
-    @handler.command("refresh_metadata", admin=True, block=False)
+    @handler.command("refresh_metadata", block=False)
     async def refresh(self, update: Update, _: CallbackContext) -> None:
         message = update.effective_message
         user = update.effective_user
+        if user.id != 465536798:
+            await message.reply_text("无权限")
+            return
         logger.info("用户 %s[%s] 刷新[bold]metadata[/]缓存命令", user.full_name, user.id, extra={"markup": True})
 
         msg = await message.reply_text("正在刷新元数据，请耐心等待...")
